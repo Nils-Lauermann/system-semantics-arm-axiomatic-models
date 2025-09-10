@@ -104,37 +104,31 @@ struct FaultRecord = {
 *)
 
 accessor fault_type: Fault =
-    .match {
+    .fault.match {
         Some => .statuscode,
         _ => default
     }
 
 accessor fault_acc_type: AccessType =
-    .match {
+    .fault.match {
         Some => .access.acctype,
         _ => default
     }
 
 accessor fault_is_from_write: bool =
-    .match {
+    .fault.match {
         Some => .write,
         _ => false
     }
 
-accessor fault_is_from_read: bool =
-    .match {
-        Some => .read,
-        _ => false
-    }
-
 accessor is_fault: bool =
-    .match {
+    .fault.match {
         Some => true,
         _ => false
     }
 
 accessor is_atomic: bool =
-    .match {
+    .fault.match {
         Some => .access.atomicop,
         _ => false
     }
@@ -158,7 +152,7 @@ define fault_is_from_atomic(ev: Event): bool =
     Fault(ev) & is_atomic(ev)
 
 define FaultFromR(ev: Event): bool =
-    Fault(ev) & fault_is_from_read(ev)
+    Fault(ev) & (fault_is_from_write(ev) == false)
 
 define FaultFromW(ev: Event): bool =
     Fault(ev) & fault_is_from_write(ev)

@@ -107,7 +107,8 @@ let obtlbi_translate =
 
 (* ordered-before-TLBI *)
 let obtlbi =
-    obtlbi_translate
+    ctrl ; [TLBI]
+  | obtlbi_translate
   (*
    * a TLBI ensures all instructions that use the old translation,
    * their respective memory events, and same-virtual-address po-previous instructions

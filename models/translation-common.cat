@@ -7,6 +7,7 @@ include "arm-translation.cat"
    will additionally belong to T_f. *)
 set T
 set T_f
+set T_af0
 
 (* T events which are part of a Stage 1 or 2 walk *)
 set Stage1
@@ -14,7 +15,7 @@ set Stage2
 
 (* A write of an invalid descriptor (an even value) is in W_invalid *)
 define has_even_value(ev: Event): bool =
-  ev.data[0 .. 0] == 0b0
+  ev.data()[0 .. 0] == 0b0
 
 define W_invalid(ev: Event): bool = W(ev) & has_even_value(ev)
 
@@ -55,6 +56,7 @@ let tlb_might_affect =
   | [ TLBI-S1 & ~TLBI-S2 &  TLBI-VA  &  TLBI-ASID & ~TLBI-VMID] ; (tlbi-translate-same-va-page & tlbi-translate-same-asid) ; [T & Stage1]
   | [ TLBI-S1 & ~TLBI-S2 & ~TLBI-VA  &  TLBI-ASID & TLBI-VMID] ; (tlbi-translate-same-asid & tlbi-translate-same-vmid) ; [T & Stage1]
   | [ TLBI-S1 & ~TLBI-S2 & ~TLBI-VA  & ~TLBI-ASID & TLBI-VMID] ; tlbi-translate-same-vmid ; [T & Stage1]
+  | [ TLBI-S1 & ~TLBI-S2 &  TLBI-VA  & ~TLBI-ASID & TLBI-VMID] ; (tlbi-translate-same-va-page & tlbi-translate-same-vmid) ; [T & Stage1]
   | [~TLBI-S1 &  TLBI-S2 &  TLBI-IPA & ~TLBI-ASID & TLBI-VMID] ; (tlbi-translate-same-ipa-page & tlbi-translate-same-vmid) ; [T & Stage2]
   | [~TLBI-S1 &  TLBI-S2 & ~TLBI-IPA & ~TLBI-ASID & TLBI-VMID] ; tlbi-translate-same-vmid ; [T & Stage2]
   | [ TLBI-S1 &  TLBI-S2 & ~TLBI-IPA & ~TLBI-ASID & TLBI-VMID] ; tlbi-translate-same-vmid ; [T]
@@ -66,7 +68,7 @@ let tlb-affects =
     [TLBI-IS] ; tlb_might_affect
   | ([~TLBI-IS] ; tlb_might_affect) & int
 
-(* [T] -> [TLBI] where the T reads-from a write before the TLBI and the TLBI is to the same addr 
+(* [T] -> [TLBI] where the T reads-from a write before the TLBI and the TLBI is to the same addr
  * this doesn't mean the T happened before the TLBI, but it does mean there could have been a cached version
  * which the TLBI threw away
  *)
@@ -76,9 +78,7 @@ let maybe_TLB_cached =
 (* translation-ordered-before *)
 let tob =
   (* a faulting translation must read from flat memory or newer *)
-    [T_f] ; tfr
-  (* no forwarding from speculative writes *)
-  | speculative ; trfi
+    [T_f | T_af0] ; tfr
 
 let tlb_barriered =
   ([T] ; tfr ; wco ; [TLBI]) & tlb-affects^-1
@@ -109,11 +109,12 @@ let obtlbi_translate =
 let obtlbi =
     obtlbi_translate
   (*
-   * a TLBI ensures all instructions that use the old translation
-   * and their respective memory events
+   * a TLBI ensures all instructions that use the old translation,
+   * their respective memory events, and same-virtual-address po-previous instructions
    * are ordered before the TLBI.
    *)
   | [R|W|Fault] ; iio^-1 ; (obtlbi_translate & ext) ; [TLBI]
+  | po-va-loc ; [R|W|Fault] ; iio^-1 ; (obtlbi_translate & ext) ; [TLBI]
 
 (* context-change ordered-before *)
 (* note that this is under-approximate and future work is needed
@@ -148,3 +149,15 @@ let obfault =
 let obETS =
     (obfault ; [Fault_T]) ; iio^-1 ; [T_f]
   | ([TLBI] ; po ; [dsb] ; instruction-order ; [T]) & tlb-affects
+
+(* ETS3-ordered-before *)
+(* if FEAT_ETS3 then if E1 is po-before some MMU Fault
+ * then E1 is ordered-before any translation-table-walk read of that fault
+ * (TagCheck Faults/MTE are not considered)
+ *
+ * Additionally, if ETS then TLBIs are guaranteed completed after DSBs
+ * hence po-later translations must be ordered after the TLBI (D8.17.8)
+ *)
+let obETS3 =
+    (po ; [Fault_MMU & ~FaultFromIF]) ; iio^-1 ; [T]
+  | ([TLBI] ; po ; [dsbsy] ; instruction-order ; [T]) & tlb-affects

@@ -116,12 +116,12 @@ define TLBI-ASID(ev: Event): bool =
     TLBI(ev) & (
           has_tlbi_op(ev, TLBIOp_ASID)
         | has_tlbi_op(ev, TLBIOp_VA)
-        | has_tlbi_op(ev, TLBIOp_VAA)
     )
 
 define TLBI-S1(ev: Event): bool =
     TLBI(ev) & (
           has_tlbi_op(ev, TLBIOp_VA)
+        | has_tlbi_op(ev, TLBIOp_VAA)
         | has_tlbi_op(ev, TLBIOp_VMALLS12)
         | has_tlbi_op(ev, TLBIOp_VMALL)
         | has_tlbi_op(ev, TLBIOp_ALL)
@@ -149,7 +149,10 @@ define TLBI-VMID(ev: Event): bool =
     )
 
 define TLBI-VA(ev: Event): bool =
-    TLBI(ev) & has_tlbi_op(ev, TLBIOp_VA)
+    TLBI(ev) & (
+          has_tlbi_op(ev, TLBIOp_VA)
+        | has_tlbi_op(ev, TLBIOp_VAA)
+    )
 
 define TLBI-IPA(ev: Event): bool =
     TLBI(ev) & has_tlbi_op(ev, TLBIOp_IPAS2)

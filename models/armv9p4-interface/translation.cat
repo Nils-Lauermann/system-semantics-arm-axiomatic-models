@@ -51,3 +51,5 @@ let tfre = tfr \ tfri
  * are related by same-va-page, similarly for IPAs and same-ipa-page *)
 relation translate-same-va-page
 relation translate-same-ipa-page
+
+let po-va-loc = po & same-va-loc

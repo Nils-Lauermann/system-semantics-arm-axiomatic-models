@@ -15,3 +15,29 @@ define same-loc(ev1: Event, ev2: Event): bool =
 let same-cache-line = same-loc
 
 (* TODO: same-icache-line and same-dcache-line which read from IMinLine DMinLine *)
+
+(* Virtual address support *)
+
+accessor read_virt_addr: bits(64) =
+    .va.match {
+        Some => self,
+        _ => 0x0000000000000000
+    }
+
+accessor write_virt_addr: bits(64) =
+    .va.match {
+        Some => self,
+        _ => 0x0000000000000000
+    }
+
+accessor cacheop_virt_addr: bits(64) = .vaddress
+
+define virt_addr(ev: Event): bits(64) =
+    ite(R(ev), read_virt_addr(ev),
+    ite(IF(ev), read_virt_addr(ev),
+    ite(W(ev), write_virt_addr(ev),
+    ite(is_cacheop(ev), cacheop_virt_addr(ev),
+    0x0000000000000000))))
+
+define same-va-loc(ev1: Event, ev2: Event): bool =
+    (virt_addr(ev1) == virt_addr(ev2))

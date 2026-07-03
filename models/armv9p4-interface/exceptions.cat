@@ -148,6 +148,34 @@ define IsPermissionFault(ev: Event): bool =
 define Fault_T(ev: Event): bool = Fault(ev) & IsTranslationFault(ev)
 define Fault_P(ev: Event): bool = Fault(ev) & IsPermissionFault(ev)
 
+define IsAlignmentFault(ev: Event): bool =
+  Fault(ev) & (fault_type(ev) == Fault_Alignment)
+
+define IsAddressSizeFault(ev: Event): bool =
+  Fault(ev) & (fault_type(ev) == Fault_AddressSize)
+
+define IsSyncExternalOnWalkFault(ev: Event): bool =
+  Fault(ev) & (fault_type(ev) == Fault_SyncExternalOnWalk)
+
+define IsAccessFlagFault(ev: Event): bool =
+  Fault(ev) & (fault_type(ev) == Fault_AccessFlag)
+
+define IsTLBConflictFault(ev: Event): bool =
+  Fault(ev) & (fault_type(ev) == Fault_TLBConflict)
+
+define IsGPCFault(ev: Event): bool =
+  Fault(ev) & ((fault_type(ev) == Fault_GPCFOnWalk) | (fault_type(ev) == Fault_GPCFOnOutput))
+
+define Fault_MMU(ev: Event): bool =
+    IsAlignmentFault(ev)
+  | IsTranslationFault(ev)
+  | IsAddressSizeFault(ev)
+  | IsSyncExternalOnWalkFault(ev)
+  | IsAccessFlagFault(ev)
+  | IsPermissionFault(ev)
+  | IsTLBConflictFault(ev)
+  | IsGPCFault(ev)
+
 define fault_is_from_atomic(ev: Event): bool =
     Fault(ev) & is_atomic(ev)
 
@@ -162,3 +190,6 @@ define FaultFromAcquireR(ev: Event): bool =
 
 define FaultFromReleaseW(ev: Event): bool =
     FaultFromW(ev) & fault_is_from_atomic(ev)
+
+define FaultFromIF(ev: Event): bool =
+    Fault(ev) & (fault_acc_type(ev) == AccessType_IFETCH)

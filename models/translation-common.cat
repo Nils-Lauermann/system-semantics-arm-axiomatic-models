@@ -24,6 +24,10 @@ define W_valid(ev: Event): bool = W(ev) & ~W_invalid(ev)
 
 relation instruction-order
 
+(* The tool splits each broadcast TLBI into one event per thread;
+   this relates a TLBI event to the events of the thread it acts on *)
+relation tlb-affects-thread
+
 (* e1 speculative e2
  * iff e2 was conditionally executed based on the value of e1
  *)
@@ -65,7 +69,7 @@ let tlb_might_affect =
 (*  | (TLBI-ALL * T) *)
 
 let tlb-affects =
-    [TLBI-IS] ; tlb_might_affect
+    ([TLBI-IS] ; tlb_might_affect) & tlb-affects-thread
   | ([~TLBI-IS] ; tlb_might_affect) & int
 
 (* [T] -> [TLBI] where the T reads-from a write before the TLBI and the TLBI is to the same addr

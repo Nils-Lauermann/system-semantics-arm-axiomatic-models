@@ -22,9 +22,6 @@ define CSE(ev: Event): bool =
   | if FEAT_ExS then (if EIS then false else TE(ev)) else TE(ev)
   | if FEAT_ExS then (if EOS then false else ERET(ev)) else ERET(ev)
 
-let ASYNC =
-  TakeInterrupt  (* where TakeInterrupt = the TE but from an injected interrupt event *)
-
 (* observed by *)
 let obs = rfe | fr | co
 
@@ -58,8 +55,8 @@ let ctxob =
   | speculative; [CSE]
 
 let asyncob =
-    speculative; [ASYNC]
-  | [ASYNC]; po
+    speculative; [Interrupt]
+  | [Interrupt]; po
 
 (* Ordered-before *)
 let ob1 = obs | dob | aob | bob | ctxob | asyncob

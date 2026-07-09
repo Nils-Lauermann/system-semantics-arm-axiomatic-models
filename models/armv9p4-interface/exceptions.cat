@@ -138,6 +138,10 @@ accessor is_atomic: bool =
 define Fault(ev: Event): bool =
     TE(ev) & is_fault(ev)
 
+(* Approximation of interrupts *)
+define Interrupt(ev: Event): bool =
+    TE(ev) & (is_fault(ev) == false)
+
 define IsTranslationFault(ev: Event): bool =
   Fault(ev) & (fault_type(ev) == Fault_Translation)
 

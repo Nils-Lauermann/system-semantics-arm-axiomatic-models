@@ -35,6 +35,7 @@ let bob =
   | [W] ; po ; [dmbst]
   | [dmbst]; po; [W]
   | [dmbld]; po; [R|W]
+  | [dsbst]; po; [R|W]
   | [L]; po; [A]
   | [A | Q]; po; [R | W]
   | [R | W]; po; [L]

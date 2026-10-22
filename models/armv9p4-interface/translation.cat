@@ -53,3 +53,4 @@ relation translate-same-va-page
 relation translate-same-ipa-page
 
 let po-va-loc = po & same-va-loc
+let po-low-order-bits = po & same-low-order-bits

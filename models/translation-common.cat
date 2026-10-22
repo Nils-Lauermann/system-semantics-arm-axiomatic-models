@@ -114,12 +114,15 @@ let obtlbi =
     ctrl ; [TLBI]
   | obtlbi_translate
   (*
-   * a TLBI ensures all instructions that use the old translation,
-   * their respective memory events, and same-virtual-address po-previous instructions
-   * are ordered before the TLBI.
+   * a TLBI ensures all instructions that use the old translation
+   * and their respective memory events are ordered before the TLBI.
    *)
   | [R|W|Fault] ; iio^-1 ; (obtlbi_translate & ext) ; [TLBI]
-  | po-va-loc ; [R|W|Fault] ; iio^-1 ; (obtlbi_translate & ext) ; [TLBI]
+  (*
+   * translations of po-earlier accesses to the same VA, or an alias with the
+   * same low-order bits, are ordered before the TLBI too (B2.3.7)
+   *)
+  | [T] ; iio ; [R|W] ; po-low-order-bits ; [R|W] ; iio^-1 ; (obtlbi_translate & ext) ; [TLBI]
 
 (* context-change ordered-before *)
 (* note that this is under-approximate and future work is needed

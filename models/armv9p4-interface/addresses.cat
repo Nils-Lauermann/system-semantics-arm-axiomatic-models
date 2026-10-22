@@ -41,3 +41,10 @@ define virt_addr(ev: Event): bits(64) =
 
 define same-va-loc(ev1: Event, ev2: Event): bool =
     (virt_addr(ev1) == virt_addr(ev2))
+
+(* Low-order bits of a VA: the 4K granule offset (B2.3.1) *)
+define low-order-bits(addr: bits(64)): bits(12) =
+    extract(11, 0, addr)
+
+define same-low-order-bits(ev1: Event, ev2: Event): bool =
+    (low-order-bits(virt_addr(ev1)) == low-order-bits(virt_addr(ev2)))

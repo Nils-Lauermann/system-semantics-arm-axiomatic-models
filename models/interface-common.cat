@@ -1,0 +1,82 @@
+relation iio
+relation po
+relation fpo
+relation rf
+relation co
+relation addr
+relation ctrl
+relation data
+relation rmw
+relation po-loc
+show iio, po, rf, co, addr, ctrl, data, rmw, po-loc
+
+(* F for all fences *)
+accessor F: bool = is sail_barrier
+
+(* read/write *)
+# accessor R: bool = is sail_mem_read
+# accessor W: bool = is sail_mem_write
+
+# enum Access_strength = {
+#   AS_normal,
+#   AS_rel_or_acq, # Release or acquire
+#   AS_acq_rcpc # Release-consistency with processor consistency
+# }
+
+# struct Explicit_access_kind = {
+#   variety : Access_variety,
+#   strength : Access_strength
+# }
+
+# union Access_kind('arch_ak : Type) = {
+#   AK_explicit: Explicit_access_kind,
+#   AK_ifetch : unit, // Instruction fetch
+#   AK_ttw : unit, // Translation table walk
+#   AK_arch : 'arch_ak // Architecture specific type of access
+# }
+
+accessor Explicit: bool = .access_kind.match {
+    AK_explicit => true,
+    _ => false
+}
+
+accessor Ifetch: bool = .access_kind.match {
+    AK_ifetch => true,
+    _ => false
+}
+
+accessor ak_strength: Access_strength = .access_kind.match {
+    AK_explicit => .strength,
+    _ => default
+}
+
+define RelAcq(ev: Event): bool = (ak_strength(ev) == AS_rel_or_acq)
+define AcqRCpc(ev: Event): bool = (ak_strength(ev) == AS_acq_rcpc)
+
+define A(ev: Event): bool =
+    R(ev) & Explicit(ev) & RelAcq(ev)
+
+define Q(ev: Event): bool =
+    R(ev) & Explicit(ev) & AcqRCpc(ev)
+
+define L(ev: Event): bool =
+    W(ev) & Explicit(ev) & RelAcq(ev)
+
+#define IF(ev: Event): bool =
+#    R(ev) & Ifetch(ev)
+
+(* branches *)
+define B(ev: Event): bool = false
+
+(* cache op *)
+(* tlbis are a kind of cache op ?*)
+accessor is_cacheop: bool = is sail_cache_op
+accessor is_tlbi: bool = is sail_tlbi
+define C(ev: Event): bool = is_cacheop(ev) | is_tlbi(ev)
+
+(* tlbi *)
+accessor TLBI: bool = is sail_tlbi
+
+(* exceptions *)
+accessor TE: bool = is sail_take_exception
+accessor ERET: bool = is sail_return_exception

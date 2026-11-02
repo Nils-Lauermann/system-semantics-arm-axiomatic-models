@@ -1,4 +1,5 @@
-include "barriers.cat"
+(* The ESOP'22 model, ported to the current isla interface. *)
+include "arm-translation.cat"
 
 (* For each instruction, for each read performed by the translation
    table walk ASL code, we generate one translate-read (T) event. If
@@ -11,29 +12,18 @@ set T_f
 set Stage1
 set Stage2
 
-set read_VMID
-set read_ASID
-relation same-translation
-
-(* A write of an invalid descriptor (an even value) is in W_invalid *)
-set W_invalid
-
-(* A write of a valid descriptor (an odd value) is in W_valid *)
-set W_valid
-
-(* initial writes *)
-set is_IW
-
-(* trf is the translate analogue of rf, such that writes are
-   trf-related to translates that read them. trf1 is trf
-   restricted to stage 1 reads, and trf2 for stage 2 reads *)
-relation trf
-relation trf1
-relation trf2
-relation wco
-
-relation iio
 relation instruction-order
+
+(* 2022 names, now derived by the interface from the sail TLBI record *)
+define same-va-page(ev1: Event, ev2: Event): bool = tlbi-translate-same-va-page(ev1, ev2)
+define same-ipa-page(ev1: Event, ev2: Event): bool = tlbi-translate-same-ipa-page(ev1, ev2)
+define same-asid(ev1: Event, ev2: Event): bool = tlbi-translate-same-asid(ev1, ev2)
+define same-vmid(ev1: Event, ev2: Event): bool = tlbi-translate-same-vmid(ev1, ev2)
+
+(* kept for bbm-violation-check.smt2, which reads them; the model body does not *)
+define has_even_value(ev: Event): bool = ev.data()[0 .. 0] == 0b0
+define W_invalid(ev: Event): bool = W(ev) & has_even_value(ev)
+define W_valid(ev: Event): bool = W(ev) & ~W_invalid(ev)
 
 (* e1 speculative e2
  * iff e2 was conditionally executed based on the value of e1
@@ -45,28 +35,6 @@ let speculative =
 
 (* po-pa relates all events from instructions in instruction-order to the same PA *)
 let po-pa = instruction-order & loc
-
-let trfi = trf & int
-let trfe = trf \ trfi
-
-(* likewise, tfr is the translate analogue of fr *)
-(* we use overlap-loc not loc here to handle the case where
- * multiple translations get merged into a single event *)
-relation overlap-loc
-let tfr1 = (((trf1^-1); co) \ id) & overlap-loc
-let tfr2 = (((trf2^-1); co) \ id) & overlap-loc
-let tfr = tfr1 | tfr2
-let tfri = tfr & int
-let tfre = tfr \ tfri
-
-(* translate and TLBI events with VAs within the same 4K region
- * are related by same-va-page, similarly for IPAs and same-ipa-page *)
-relation same-va-page
-relation same-ipa-page
-relation same-asid-internal
-relation same-vmid-internal
-relation tlbi-to-asid-read
-relation tlbi-to-vmid-read
 
 (* for convenience, derive some handy embeddings of program-order into
  * some subset of the events *)
@@ -89,28 +57,19 @@ let _addr =
 
 (* CSEs are context-synchronization-events
  * that is an ISB, and taking/returning from an exception *)
-(*
-let CSE = ISB | TE | ERET
-*)
+define CSE(ev: Event): bool = ISB(ev) | TE(ev) | ERET(ev)
 
 (* Context changing operations
  * are those that write to system registers
  *)
-let ContextChange = MSR | TE | ERET
+define ContextChange(ev: Event): bool = MSR(ev) | TE(ev) | ERET(ev)
 
 (* fault events come from reads or writes *)
-let Fault = TE  (* TakeException, this is overly general *)
-let IsTranslationFault = Fault
-let IsPermissionFault = Fault
-set IsFromR  (* events originating from an Arm LDR instruction *)
-set IsFromW  (* events originating from an Arm STR instruction *)
-set IsFromReleaseW  (* events originating from an Arm STLR instruction *)
-
-(* Currently we only use same-vmid/same-asid between TLBIs and
- * translates, so this relation defines them in a minimal way.
- *)
-let same-vmid = tlbi-to-vmid-read; [read_VMID]; same-translation
-let same-asid = tlbi-to-asid-read; [read_ASID]; same-translation
+(* 2022 had `let Fault = TE` and called it overly general; Fault here is the
+ * interface's, every fault kind, which keeps that reading *)
+define IsFromR(ev: Event): bool = FaultFromR(ev)
+define IsFromW(ev: Event): bool = FaultFromW(ev)
+define IsFromReleaseW(ev: Event): bool = FaultFromReleaseW(ev)
 
 (* A TLBI barriers some writes, making them unobservable to "future" reads from a translation table walk.
  *
@@ -218,5 +177,3 @@ let obfault =
 let obETS =
     (obfault ; [Fault]) ; iio^-1 ; [T_f]
   | ([TLBI] ; po ; [dsb] ; instruction-order ; [T]) & tlb-affects
-
-include "shows.cat"

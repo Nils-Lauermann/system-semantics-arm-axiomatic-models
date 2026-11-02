@@ -108,7 +108,7 @@
     (implies (= BBM_W1 BBM_Wl0) (= S_Wp BBM_Wl0))
     (wco S_Wp S_tlbi)
     (TLBI-VA S_tlbi)
-    (= (tlbi_va (val_of_cache_op S_tlbi)) (concat #x0000 BBM_ia #x000))
+    (= (tlbi_address S_tlbi) (concat #x0000 BBM_ia #x000))
     (wco S_tlbi BBM_W2)))
 
 ; If there are no valid BBM sequence between BBM_W1 and BBM_W2, we have a BBM violation 

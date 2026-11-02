@@ -1,0 +1,1 @@
+accessor MSR: bool = is sail_system_register_write

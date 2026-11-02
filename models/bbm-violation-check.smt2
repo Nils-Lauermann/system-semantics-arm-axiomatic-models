@@ -42,7 +42,7 @@
 (assert (= (page_offset BBM_Wl0_pa) (ia_offset0 BBM_ia)))
 (assert (= (page_offset BBM_Wl1_pa) (ia_offset1 BBM_ia)))
 (assert (= (page_offset BBM_Wl2_pa) (ia_offset2 BBM_ia)))
-(assert (= (page_offset BBM_Wl3_pa) (ia_offset2 BBM_ia)))
+(assert (= (page_offset BBM_Wl3_pa) (ia_offset3 BBM_ia)))
 
 (assert (tt_write BBM_Wl0 BBM_Wl0_pa BBM_Wl0_data))
 

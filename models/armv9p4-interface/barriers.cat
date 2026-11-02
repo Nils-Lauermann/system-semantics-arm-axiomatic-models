@@ -121,10 +121,8 @@ define dsbld(ev: Event): bool =
 define dsbnsh(ev: Event): bool =
     DSBNSH(ev)
 
-(* Deliberately not upstream 39f2f21, which added DMB.ISH and DMB.NSH here.
- * 2022 had dmbsy = dsbsy | DMB.SY and this branch keeps it. *)
 define dmbsy(ev: Event): bool =
-    dsbsy(ev) | DMBSY(ev)
+    dsbsy(ev) | DMBSY(ev) | DMBISH(ev) | DMBNSH(ev)
 
 define dmbst(ev: Event): bool =
     dmbsy(ev) | dsbst(ev) | DMBST(ev) | DSBST(ev) | DSBISHST(ev) | DSBNSHST(ev)

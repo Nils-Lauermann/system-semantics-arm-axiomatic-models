@@ -28,6 +28,9 @@ relation instruction-order
    this relates a TLBI event to the events of the thread it acts on *)
 relation tlb-affects-thread
 
+(* --variant ETS2: FEAT_ETS2 instead of FEAT_ETS3 in obETS *)
+variant ETS2
+
 (* e1 speculative e2
  * iff e2 was conditionally executed based on the value of e1
  *)
@@ -147,25 +150,17 @@ let obfault =
   | [R|W] ; po ; [Fault_T & FaultFromW & FaultFromReleaseW]
 
 (* ETS-ordered-before *)
-(* if FEAT_ETS then if E1 is ordered-before some Fault
- * then E1 is ordered-before the translation-table-walk read which generated that fault
- * (but not *every* read from the walk, only the one that directly led to the translation fault)
- *
- * Additionally, if ETS then TLBIs are guaranteed completed after DSBs
- * hence po-later translations must be ordered after the TLBI (D5.10.2)
- *)
-let obETS =
-    (obfault ; [Fault_T]) ; iio^-1 ; [T_f]
-  | ([TLBI] ; po ; [dsb] ; instruction-order ; [T]) & tlb-affects
-
-(* ETS3-ordered-before *)
-(* if FEAT_ETS3 then if E1 is po-before some MMU Fault
- * then E1 is ordered-before any translation-table-walk read of that fault
- * (TagCheck Faults/MTE are not considered)
+(* if E1 is po-before some MMU Fault then E1 is ordered-before any
+ * translation-table-walk read of that fault: all MMU faults under FEAT_ETS3
+ * (default), only TLBUncacheable ones with --variant ETS2 (B2.3.7;
+ * TagCheck Faults/MTE are not considered)
  *
  * Additionally, if ETS then TLBIs are guaranteed completed after DSBs
  * hence po-later translations must be ordered after the TLBI (D8.17.8)
  *)
-let obETS3 =
-    (po ; [Fault_MMU & ~FaultFromIF]) ; iio^-1 ; [T]
+define Fault_ETS(ev: Event): bool =
+    if ETS2 then Fault_TLBUncacheable(ev) else Fault_MMU(ev)
+
+let obETS =
+    (po ; [Fault_ETS & ~FaultFromIF]) ; iio^-1 ; [T]
   | ([TLBI] ; po ; [dsbsy] ; instruction-order ; [T]) & tlb-affects

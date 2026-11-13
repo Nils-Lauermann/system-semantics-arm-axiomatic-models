@@ -1,4 +1,6 @@
-"VMSA strong"
+"VMSA strong, no axioms"
+(* the model of aarch64_mmu_strong_ETS3.cat without its axioms: every candidate
+   is allowed, for drawing and collecting executions *)
 include "cos.cat"
 include "arm-common.cat"
 include "translation-common.cat"
@@ -8,7 +10,7 @@ let obs = rfe | fr | wco
   (* observing a write through a fetch or translate
    * means the write is now visible to the rest of the system
    * aka {instruction, translation}->data coherence *)
-  | trfe
+  | trf
 
 (* dependency-ordered-before *)
 let dob =
@@ -16,7 +18,6 @@ let dob =
   | speculative ; [W]
   | addr; po; [W]
   | (addr | data); rfi
-  | (addr | data); trfi
 
 (* atomic-ordered-before *)
 let aob = rmw

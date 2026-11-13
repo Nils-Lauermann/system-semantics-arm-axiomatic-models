@@ -170,6 +170,8 @@ define IsTLBConflictFault(ev: Event): bool =
 define IsGPCFault(ev: Event): bool =
   Fault(ev) & ((fault_type(ev) == Fault_GPCFOnWalk) | (fault_type(ev) == Fault_GPCFOnOutput))
 
+(* MMU faults (D8.15.1; the Arm ARM also allows an IMPLEMENTATION DEFINED
+   fault for unsupported exclusive or atomic accesses) *)
 define Fault_MMU(ev: Event): bool =
     IsAlignmentFault(ev)
   | IsTranslationFault(ev)
@@ -179,6 +181,14 @@ define Fault_MMU(ev: Event): bool =
   | IsPermissionFault(ev)
   | IsTLBConflictFault(ev)
   | IsGPCFault(ev)
+
+(* TLBUncacheable faults (B2.3.1): the TTD read cannot have come from the TLB.
+   Permission faults are not TLBUncacheable. *)
+define Fault_TLBUncacheable(ev: Event): bool =
+    IsTranslationFault(ev)
+  | IsAccessFlagFault(ev)
+  | IsAddressSizeFault(ev)
+  | IsSyncExternalOnWalkFault(ev)
 
 define fault_is_from_atomic(ev: Event): bool =
     Fault(ev) & is_atomic(ev)

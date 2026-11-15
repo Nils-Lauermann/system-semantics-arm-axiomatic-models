@@ -140,14 +140,13 @@ let ctxob =
  (* context-synchronization-events cannot happen speculatively *)
   | speculative ; [CSE]
 
-(* ordered-before a translation fault *)
+(* ordered-before a fault *)
 let obfault =
     data ; [Fault_T & FaultFromW]
   | speculative ; [Fault_T & FaultFromW]
-  | [dmbst] ; po ; [Fault_T & FaultFromW]
-  | [dmbld] ; po ; [Fault_T & (FaultFromW | FaultFromR)]
-  | [A|Q] ; po ; [Fault_T & (FaultFromW | FaultFromR)]
-  | [R|W] ; po ; [Fault_T & FaultFromW & FaultFromReleaseW]
+  | [dmbst] ; po ; [Fault_MMU & FaultFromW]
+  | [dmbld] ; po ; [Fault_MMU & (FaultFromW | FaultFromR)]
+  | [A|Q] ; po ; [Fault_MMU & (FaultFromW | FaultFromR)]
 
 (* ETS-ordered-before *)
 (* if E1 is po-before some MMU Fault then E1 is ordered-before any
